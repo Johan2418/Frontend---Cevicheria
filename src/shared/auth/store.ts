@@ -9,6 +9,7 @@ import {
   refreshSession,
   setAccessToken,
   setAuthFailureListener,
+  setRefreshToken,
 } from '@/shared/auth/tokens';
 
 interface AuthState {
@@ -63,6 +64,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   login: async (correo, contrasenia) => {
     const { data } = await apiClient.post<AuthTokens>('/auth/login', { correo, contrasenia });
     setAccessToken(data.access_token);
+    setRefreshToken(data.refresh_token);
     const { data: profile } = await apiClient.get<UserProfile>('/auth/profile');
     const permissions = await resolvePermissions(profile.codigoRol, profile.idRol);
     set({ status: 'authenticated', profile, permissions });

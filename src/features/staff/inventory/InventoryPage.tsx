@@ -158,7 +158,11 @@ export function InventoryPage() {
       </Card>
 
       {activeKind && (
-        <MovementFormModal kind={activeKind} onClose={() => setActiveKind(null)} />
+        <MovementFormModal
+          kind={activeKind}
+          products={inventoryQuery.data ?? []}
+          onClose={() => setActiveKind(null)}
+        />
       )}
     </div>
   );
@@ -194,16 +198,19 @@ const adjustSchema = z.object({
 type BaseValues = z.infer<typeof baseSchema>;
 type AdjustValues = z.infer<typeof adjustSchema>;
 
-function MovementFormModal({ kind, onClose }: { kind: MovementKind; onClose: () => void }) {
-  const inventoryQuery = useQuery({
-    queryKey: ['inventory', 'current'],
-    queryFn: inventoryApi.getCurrentInventory,
-  });
-
+function MovementFormModal({
+  kind,
+  products,
+  onClose,
+}: {
+  kind: MovementKind;
+  products: { productId: string; product: { name: string } }[];
+  onClose: () => void;
+}) {
   if (kind === 'ADJUST') {
-    return <AdjustMovementForm products={inventoryQuery.data ?? []} onClose={onClose} />;
+    return <AdjustMovementForm products={products} onClose={onClose} />;
   }
-  return <StandardMovementForm kind={kind} products={inventoryQuery.data ?? []} onClose={onClose} />;
+  return <StandardMovementForm kind={kind} products={products} onClose={onClose} />;
 }
 
 function StandardMovementForm({
@@ -267,6 +274,11 @@ function StandardMovementForm({
       }
     >
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        {products.length === 0 && (
+          <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+            No hay jornada abierta o no hay productos con inventario. Abrí la jornada para registrar movimientos.
+          </p>
+        )}
         <Select label="Producto" placeholder="Seleccioná un producto" error={form.formState.errors.productId?.message} {...form.register('productId')}>
           {products.map((inv) => (
             <option key={inv.productId} value={inv.productId}>
@@ -348,6 +360,11 @@ function AdjustMovementForm({
       }
     >
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        {products.length === 0 && (
+          <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+            No hay jornada abierta o no hay productos con inventario. Abrí la jornada para registrar movimientos.
+          </p>
+        )}
         <Select label="Producto" placeholder="Seleccioná un producto" error={form.formState.errors.productId?.message} {...form.register('productId')}>
           {products.map((inv) => (
             <option key={inv.productId} value={inv.productId}>
