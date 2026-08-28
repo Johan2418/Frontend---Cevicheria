@@ -26,7 +26,10 @@ export function ManualOrderModal({ onClose }: { onClose: () => void }) {
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState(1);
 
-  const productsQuery = useQuery({ queryKey: ['products'], queryFn: () => catalogApi.listProducts({ active: true, limit: 100 }) });
+  const productsQuery = useQuery({
+    queryKey: ['products', { active: true, limit: 100 }],
+    queryFn: () => catalogApi.listProducts({ active: true, limit: 100 }),
+  });
   const tablesQuery = useQuery({ queryKey: ['tables'], queryFn: tablesApi.listTables });
 
   const mutation = useMutation({
@@ -42,10 +45,22 @@ export function ManualOrderModal({ onClose }: { onClose: () => void }) {
   const products = productsQuery.data ?? [];
 
   function addItem() {
-    if (!productId || quantity < 1) return;
+    if (!productId || !Number.isInteger(quantity) || quantity < 1) return;
     const product = products.find((p) => p.idProduct === productId);
     if (!product) return;
-    setItems((prev) => [...prev, { productId, quantity }]);
+    // La API rechaza el pedido si un producto aparece dos veces, así que al
+    // volver a agregar el mismo se acumula la cantidad en la línea existente.
+    setItems((prev) => {
+      const existing = prev.find((i) => i.productId === productId);
+      if (existing) {
+        return prev.map((i) =>
+          i.productId === productId
+            ? { ...i, quantity: Math.min(100, i.quantity + quantity) }
+            : i,
+        );
+      }
+      return [...prev, { productId, quantity }];
+    });
     setProductId('');
     setQuantity(1);
   }
@@ -100,7 +115,15 @@ export function ManualOrderModal({ onClose }: { onClose: () => void }) {
             </Select>
           </div>
           <div className="w-24">
-            <Input label="Cant." type="number" min={1} value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} />
+            <Input
+              label="Cant."
+              type="number"
+              min={1}
+              max={100}
+              inputMode="numeric"
+              value={quantity}
+              onChange={(e) => setQuantity(Number.parseInt(e.target.value, 10) || 1)}
+            />
           </div>
           <Button onClick={addItem} disabled={!productId}>
             <Plus className="size-4" aria-hidden />
@@ -111,7 +134,7 @@ export function ManualOrderModal({ onClose }: { onClose: () => void }) {
           {items.map((item, index) => {
             const product = products.find((p) => p.idProduct === item.productId);
             return (
-              <li key={`${item.productId}-${index}`} className="flex items-center justify-between py-2">
+              <li key={item.productId} className="flex items-center justify-between py-2">
                 <div>
                   <p className="font-medium text-stone-900">
                     {item.quantity} × {product?.name ?? item.productId}
@@ -131,6 +154,12 @@ export function ManualOrderModal({ onClose }: { onClose: () => void }) {
             );
           })}
         </ul>
+
+        {items.length >= 50 && (
+          <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+            Un pedido admite hasta 50 productos distintos.
+          </p>
+        )}
 
         {items.length > 0 && (
           <div className="flex items-center justify-between border-t border-stone-100 pt-3">

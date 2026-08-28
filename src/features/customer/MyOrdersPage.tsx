@@ -29,6 +29,7 @@ function MyOrdersContent() {
   const queryClient = useQueryClient();
   const [canceling, setCanceling] = useState<Order | null>(null);
   const [reason, setReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
 
   const ordersQuery = useQuery({
     queryKey: ['my-orders'],
@@ -38,13 +39,25 @@ function MyOrdersContent() {
 
   if (ordersQuery.isPending) return <FullPageSpinner />;
   if (ordersQuery.isError) {
-    return <EmptyState title="No se pudo cargar tus pedidos" />;
+    return (
+      <EmptyState
+        icon={<Receipt className="size-10" aria-hidden />}
+        title="No se pudieron cargar tus pedidos"
+        description="Revisá tu conexión e intentá de nuevo."
+        action={
+          <Button onClick={() => void ordersQuery.refetch()} loading={ordersQuery.isFetching}>
+            Reintentar
+          </Button>
+        }
+      />
+    );
   }
 
   const orders = ordersQuery.data ?? [];
 
   async function confirmCancel() {
-    if (!canceling || !token) return;
+    if (!canceling || !token || cancelling) return;
+    setCancelling(true);
     try {
       await ordersApi.cancel(canceling.idOrder, { reason }, token);
       toast({ tone: 'success', title: 'Pedido cancelado' });
@@ -53,6 +66,8 @@ function MyOrdersContent() {
       await queryClient.invalidateQueries({ queryKey: ['my-orders'] });
     } catch (e) {
       toast(toastError(e));
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -112,7 +127,12 @@ function MyOrdersContent() {
             <Button variant="outline" onClick={() => setCanceling(null)}>
               Volver
             </Button>
-            <Button variant="danger" onClick={confirmCancel} disabled={reason.trim().length < 3}>
+            <Button
+              variant="danger"
+              onClick={confirmCancel}
+              loading={cancelling}
+              disabled={reason.trim().length < 3}
+            >
               Confirmar cancelación
             </Button>
           </>
@@ -120,8 +140,9 @@ function MyOrdersContent() {
       >
         <Textarea
           label="Motivo"
-          placeholder="Mínimo 3 caracteres"
+          placeholder="Ej: me equivoqué de plato"
           rows={3}
+          maxLength={500}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           hint="Mínimo 3 caracteres"

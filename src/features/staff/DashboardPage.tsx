@@ -43,8 +43,33 @@ export function DashboardPage() {
     enabled: hasPermission(PERMISSIONS.REPORT_READ),
   });
 
-  const dayOpen = Boolean(dayQuery.data);
-  const cashOpen = Boolean(cashQuery.data);
+  // Sólo se ofrecen atajos a secciones que el rol puede abrir: enlazar a una
+  // pantalla que responde "sin permisos" es una promesa que el panel no cumple.
+  const quickLinks = [
+    {
+      to: '/admin/cocina',
+      label: 'Cocina',
+      icon: <UtensilsCrossed className="size-5" aria-hidden />,
+      permission: PERMISSIONS.ORDER_READ_OPERATIONAL,
+    },
+    {
+      to: '/admin/inventario',
+      label: 'Inventario',
+      icon: <Package className="size-5" aria-hidden />,
+      permission: PERMISSIONS.INVENTORY_READ,
+    },
+    {
+      to: '/admin/reportes',
+      label: 'Reportes',
+      icon: <BarChart3 className="size-5" aria-hidden />,
+      permission: PERMISSIONS.REPORT_READ,
+    },
+  ].filter((link) => hasPermission(link.permission));
+
+  const dayOpen = dayQuery.data?.status === 'OPEN';
+  // La jornada puede tener una caja ya cerrada: `/cash-sessions/current` la
+  // sigue devolviendo, así que hay que mirar el estado y no la mera presencia.
+  const cashOpen = cashQuery.data?.cashSession.status === 'OPEN';
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -64,7 +89,7 @@ export function DashboardPage() {
               ? `Abierta el ${formatDate(dayQuery.data.businessDate)} a las ${formatTime(dayQuery.data.openedAt)}`
               : 'No hay jornada abierta'
           }
-          actionLabel={dayOpen ? 'Ver inventario' : 'Abrir jornada'}
+          actionLabel={dayOpen ? 'Ver jornada' : 'Abrir jornada'}
           actionTo="/admin/jornada"
         />
 
@@ -93,16 +118,18 @@ export function DashboardPage() {
         </Card>
       )}
 
-      <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-500">
-          Accesos rápidos
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <QuickLink to="/admin/cocina" icon={<UtensilsCrossed className="size-5" aria-hidden />} label="Cocina" />
-          <QuickLink to="/admin/inventario" icon={<Package className="size-5" aria-hidden />} label="Inventario" />
-          <QuickLink to="/admin/reportes" icon={<BarChart3 className="size-5" aria-hidden />} label="Reportes" />
+      {quickLinks.length > 0 && (
+        <div>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-500">
+            Accesos rápidos
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {quickLinks.map((link) => (
+              <QuickLink key={link.to} to={link.to} icon={link.icon} label={link.label} />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

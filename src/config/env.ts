@@ -14,4 +14,5 @@ export const STORAGE_KEYS = {
   refreshToken: 'cholosbar.refresh_token',
   tableSession: 'cholosbar.table_session',
   tableInfo: 'cholosbar.table_info',
+  cart: 'cholosbar.cart',
 } as const;

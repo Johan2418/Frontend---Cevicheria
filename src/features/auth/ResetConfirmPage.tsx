@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '@/shared/api/auth';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
@@ -25,13 +25,21 @@ type FormValues = z.infer<typeof schema>;
 export function ResetConfirmPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  // El enlace de recuperación llega con el token en la URL; precargarlo evita
+  // que la persona tenga que copiarlo a mano desde el correo.
+  const tokenFromLink = searchParams.get('token') ?? '';
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { token: tokenFromLink, newPassword: '', confirmacion: '' },
+  });
 
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null);
@@ -47,7 +55,12 @@ export function ResetConfirmPage() {
   return (
     <AuthLayout title="Nueva contraseña" subtitle="Ingresa el token recibido y tu nueva contraseña">
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
-        <Input label="Token de recuperación" error={errors.token?.message} {...register('token')} />
+        <Input
+          label="Token de recuperación"
+          hint={tokenFromLink ? 'Tomado del enlace del correo' : 'El token caduca a los 15 minutos'}
+          error={errors.token?.message}
+          {...register('token')}
+        />
         <Input
           label="Nueva contraseña"
           type="password"

@@ -109,7 +109,7 @@ function OpenDayForm() {
   const [quantities, setQuantities] = useState<Record<string, string>>({});
 
   const productsQuery = useQuery({
-    queryKey: ['products'],
+    queryKey: ['products', { active: true, limit: 100 }],
     queryFn: () => catalogApi.listProducts({ active: true, limit: 100 }),
   });
 

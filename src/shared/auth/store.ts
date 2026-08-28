@@ -25,11 +25,20 @@ interface AuthState {
   hasPermission: (code: PermissionCode) => boolean;
 }
 
-async function resolvePermissions(codigoRol: string, idRol: number): Promise<PermissionCode[]> {
-  const known = permissionsForRole(codigoRol);
+/**
+ * Los permisos efectivos los resuelve el backend y viajan en `/auth/profile`.
+ * Los mapas locales por rol quedan solo como respaldo para APIs antiguas que
+ * todavía no envían el campo: si un admin edita los permisos de un rol, la
+ * fuente de verdad sigue siendo el backend y no esta copia.
+ */
+async function resolvePermissions(profile: UserProfile): Promise<PermissionCode[]> {
+  if (profile.permissions) {
+    return profile.permissions as PermissionCode[];
+  }
+  const known = permissionsForRole(profile.codigoRol);
   if (known) return known;
   try {
-    const { data } = await apiClient.get<Rol>(`/rols/${idRol}`);
+    const { data } = await apiClient.get<Rol>(`/rols/${profile.idRol}`);
     return (data.permissions ?? []).map((p) => p.codigoPermiso as PermissionCode);
   } catch {
     return [];
@@ -53,7 +62,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     try {
       await refreshSession();
       const { data } = await apiClient.get<UserProfile>('/auth/profile');
-      const permissions = await resolvePermissions(data.codigoRol, data.idRol);
+      const permissions = await resolvePermissions(data);
       set({ status: 'authenticated', profile: data, permissions });
     } catch {
       clearSession();
@@ -66,7 +75,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     setAccessToken(data.access_token);
     setRefreshToken(data.refresh_token);
     const { data: profile } = await apiClient.get<UserProfile>('/auth/profile');
-    const permissions = await resolvePermissions(profile.codigoRol, profile.idRol);
+    const permissions = await resolvePermissions(profile);
     set({ status: 'authenticated', profile, permissions });
   },
 
@@ -97,7 +106,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   refreshProfile: async () => {
     const { data } = await apiClient.get<UserProfile>('/auth/profile');
-    const permissions = await resolvePermissions(data.codigoRol, data.idRol);
+    const permissions = await resolvePermissions(data);
     set({ profile: data, permissions });
   },
 

@@ -8,19 +8,23 @@ import { Input } from '@/shared/components/ui/Input';
 import { Badge } from '@/shared/components/ui/Badge';
 import { EmptyState } from '@/shared/components/ui/EmptyState';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
+import { useDebouncedValue } from '@/shared/lib/useDebouncedValue';
 
 export function AuditPage() {
   const [eventCode, setEventCode] = useState('');
   const [resourceType, setResourceType] = useState('');
+  const debouncedEventCode = useDebouncedValue(eventCode.trim());
+  const debouncedResourceType = useDebouncedValue(resourceType.trim());
 
   const eventsQuery = useQuery({
-    queryKey: ['audit', eventCode, resourceType],
+    queryKey: ['audit', debouncedEventCode, debouncedResourceType],
     queryFn: () =>
       auditApi.list({
         limit: 100,
-        eventCode: eventCode || undefined,
-        resourceType: resourceType || undefined,
+        eventCode: debouncedEventCode || undefined,
+        resourceType: debouncedResourceType || undefined,
       }),
+    placeholderData: (previous) => previous,
   });
 
   return (
@@ -57,10 +61,18 @@ export function AuditPage() {
         <CardBody>
           {eventsQuery.isPending ? (
             <FullPageSpinner />
+          ) : eventsQuery.isError ? (
+            <EmptyState
+              title="No se pudo cargar la auditoría"
+              description="Intentá de nuevo en unos momentos."
+            />
           ) : !eventsQuery.data || eventsQuery.data.length === 0 ? (
             <EmptyState title="Sin eventos" description="No se encontraron eventos de auditoría." />
           ) : (
-            <div className="overflow-x-auto">
+            <div
+              className={eventsQuery.isFetching ? 'overflow-x-auto opacity-60 transition-opacity' : 'overflow-x-auto'}
+              aria-busy={eventsQuery.isFetching}
+            >
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-stone-200 text-stone-500">

@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { useAuthStore } from './shared/auth/store';
-import { RequireAuth } from './routes/guards';
+import { RequireAuth, RequirePermission } from './routes/guards';
+import { PERMISSIONS } from './shared/lib/permissions';
 
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
@@ -64,16 +65,94 @@ export default function App() {
           }
         >
           <Route index element={<DashboardPage />} />
-          <Route path="jornada" element={<BusinessDayPage />} />
-          <Route path="inventario" element={<InventoryPage />} />
-          <Route path="catalogo" element={<CatalogPage />} />
-          <Route path="mesas" element={<TablesPage />} />
-          <Route path="cocina" element={<KitchenPage />} />
-          <Route path="pagos" element={<PaymentsPage />} />
-          <Route path="caja" element={<CashPage />} />
-          <Route path="reportes" element={<ReportsPage />} />
-          <Route path="auditoria" element={<AuditPage />} />
-          <Route path="roles" element={<RolesPage />} />
+          <Route
+            path="jornada"
+            element={
+              <RequirePermission
+                anyOf={[PERMISSIONS.BUSINESS_DAY_OPEN, PERMISSIONS.BUSINESS_DAY_CLOSE, PERMISSIONS.INVENTORY_READ]}
+              >
+                <BusinessDayPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="inventario"
+            element={
+              <RequirePermission code={PERMISSIONS.INVENTORY_READ}>
+                <InventoryPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="catalogo"
+            element={
+              <RequirePermission
+                anyOf={[PERMISSIONS.PRODUCT_READ, PERMISSIONS.PRODUCT_MANAGE, PERMISSIONS.CATEGORY_MANAGE]}
+              >
+                <CatalogPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="mesas"
+            element={
+              <RequirePermission anyOf={[PERMISSIONS.TABLE_READ, PERMISSIONS.TABLE_MANAGE]}>
+                <TablesPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="cocina"
+            element={
+              <RequirePermission
+                anyOf={[PERMISSIONS.ORDER_READ_OPERATIONAL, PERMISSIONS.ORDER_TRANSITION]}
+              >
+                <KitchenPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="pagos"
+            element={
+              <RequirePermission code={PERMISSIONS.PAYMENT_VERIFY}>
+                <PaymentsPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="caja"
+            element={
+              <RequirePermission
+                anyOf={[PERMISSIONS.CASH_READ, PERMISSIONS.CASH_OPEN, PERMISSIONS.CASH_CLOSE]}
+              >
+                <CashPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="reportes"
+            element={
+              <RequirePermission code={PERMISSIONS.REPORT_READ}>
+                <ReportsPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="auditoria"
+            element={
+              <RequirePermission code={PERMISSIONS.AUDIT_READ}>
+                <AuditPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="roles"
+            element={
+              <RequirePermission code={PERMISSIONS.ROLE_MANAGE}>
+                <RolesPage />
+              </RequirePermission>
+            }
+          />
         </Route>
 
         <Route path="/perfil" element={<RequireAuth><ProfilePage /></RequireAuth>} />
