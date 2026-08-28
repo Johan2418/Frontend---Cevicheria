@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -34,6 +35,17 @@ const toneIcons: Record<ToastTone, ReactNode> = {
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const idRef = useRef(0);
+  const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  useEffect(
+    () => () => {
+      // Los temporizadores pendientes intentarían actualizar el estado de un
+      // provider ya desmontado.
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current.clear();
+    },
+    [],
+  );
 
   const remove = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -43,7 +55,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (input: { tone?: ToastTone; title: string; description?: string }) => {
       const id = ++idRef.current;
       setToasts((prev) => [...prev, { id, tone: input.tone ?? 'info', ...input }]);
-      setTimeout(() => remove(id), 5000);
+      const timer = setTimeout(() => {
+        timersRef.current.delete(timer);
+        remove(id);
+      }, 5000);
+      timersRef.current.add(timer);
     },
     [remove],
   );
@@ -61,7 +77,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            role="status"
+            role={t.tone === 'error' ? 'alert' : 'status'}
             className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-lg border border-stone-200 bg-white p-4 shadow-lg"
           >
             <div className="mt-0.5 shrink-0">{toneIcons[t.tone]}</div>

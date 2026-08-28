@@ -59,6 +59,8 @@ export interface UserProfile {
   codigoRol: string;
   sid: string;
   jti: string;
+  /** Códigos de permiso efectivos del rol, resueltos por el backend. */
+  permissions?: string[];
 }
 
 export interface Perfil {

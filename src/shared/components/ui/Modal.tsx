@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
@@ -22,6 +22,11 @@ const sizeClasses = {
 export function Modal({ open, onClose, title, description, children, footer, size = 'md' }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  // Ids únicos: con dos modales montados a la vez, un "modal-title" fijo dejaba
+  // a los lectores de pantalla anunciando el título del modal equivocado.
+  const baseId = useId();
+  const titleId = `${baseId}-title`;
+  const descriptionId = `${baseId}-desc`;
 
   useEffect(() => {
     if (!open) return;
@@ -50,6 +55,8 @@ export function Modal({ open, onClose, title, description, children, footer, siz
     };
 
     document.addEventListener('keydown', onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const firstFocusable = panelRef.current?.querySelector<HTMLElement>(
       'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
     );
@@ -57,6 +64,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
 
     return () => {
       document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
       previouslyFocused.current?.focus();
     };
   }, [open, onClose]);
@@ -74,8 +82,8 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-title"
-        aria-describedby={description ? 'modal-desc' : undefined}
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
         className={cn(
           'flex max-h-[90vh] w-full flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl',
           sizeClasses[size],
@@ -83,11 +91,11 @@ export function Modal({ open, onClose, title, description, children, footer, siz
       >
         <div className="flex items-start justify-between gap-4 border-b border-stone-100 px-5 py-4">
           <div>
-            <h2 id="modal-title" className="text-lg font-semibold text-stone-900">
+            <h2 id={titleId} className="text-lg font-semibold text-stone-900">
               {title}
             </h2>
             {description && (
-              <p id="modal-desc" className="mt-0.5 text-sm text-stone-500">
+              <p id={descriptionId} className="mt-0.5 text-sm text-stone-500">
                 {description}
               </p>
             )}

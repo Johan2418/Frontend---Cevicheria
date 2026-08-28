@@ -14,6 +14,7 @@ import { Select } from '@/shared/components/ui/Select';
 import { ConfirmDialog } from '@/shared/components/ui/ConfirmDialog';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
 import { Badge } from '@/shared/components/ui/Badge';
+import { ORDER_STATUS_LABEL } from '@/shared/components/OrderStatusBadge';
 import { toastError, useToast } from '@/shared/components/ui/Toast';
 import { cn } from '@/shared/lib/cn';
 import { ManualOrderModal } from './ManualOrderModal';
@@ -57,6 +58,7 @@ export function KitchenPage() {
   if (ordersQuery.isPending) return <FullPageSpinner />;
 
   const orders = ordersQuery.data ?? [];
+  const loadError = ordersQuery.isError;
   const canTransition = hasPermission(PERMISSIONS.ORDER_TRANSITION);
   const canManual = hasPermission(PERMISSIONS.ORDER_CREATE_MANUAL);
 
@@ -73,6 +75,12 @@ export function KitchenPage() {
           </Button>
         )}
       </div>
+
+      {loadError && (
+        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800" role="alert">
+          No se pudieron actualizar los pedidos. Se sigue reintentando automáticamente.
+        </p>
+      )}
 
       <div className="flex gap-4 overflow-x-auto pb-4">
         {COLUMNS.map((col) => {
@@ -216,7 +224,11 @@ function OrderCard({
           setConfirmTo(null);
         }}
         title="Cambiar estado"
-        description={`¿Avanzar el pedido a "${confirmTo}"?`}
+        description={
+          confirmTo
+            ? `¿Avanzar el pedido al estado "${ORDER_STATUS_LABEL[confirmTo]}"?`
+            : undefined
+        }
         confirmLabel="Confirmar"
         tone="primary"
       />
@@ -281,8 +293,10 @@ function RejectModal({
         label="Motivo"
         placeholder="Motivo del rechazo (mínimo 3 caracteres)"
         rows={3}
+        maxLength={500}
         value={reason}
         onChange={(e) => setReason(e.target.value)}
+        hint="El cliente verá este motivo en su pedido"
       />
     </Modal>
   );
@@ -329,8 +343,10 @@ function CancelExceptionModal({
         <Textarea
           label="Motivo"
           rows={3}
+          maxLength={500}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
+          hint="Mínimo 3 caracteres"
         />
       </div>
     </Modal>
@@ -347,13 +363,23 @@ function HistoryModal({ orderId, onClose }: { orderId: string; onClose: () => vo
     <Modal open onClose={onClose} title="Historial del pedido" size="sm">
       {historyQuery.isPending ? (
         <FullPageSpinner />
+      ) : (historyQuery.data ?? []).length === 0 ? (
+        <p className="text-sm text-stone-500">Este pedido todavía no tiene cambios de estado.</p>
       ) : (
         <ol className="space-y-3">
           {(historyQuery.data ?? []).map((h) => (
             <li key={h.idOrderStatusHistory} className="flex items-start gap-3">
               <span className="mt-1.5 size-2 shrink-0 rounded-full bg-brand-500" aria-hidden />
               <div>
-                <p className="text-sm font-medium text-stone-800">{h.nextStatus}</p>
+                <p className="text-sm font-medium text-stone-800">
+                  {ORDER_STATUS_LABEL[h.nextStatus]}
+                  {h.previousStatus && (
+                    <span className="font-normal text-stone-400">
+                      {' '}
+                      (desde {ORDER_STATUS_LABEL[h.previousStatus]})
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs text-stone-500">
                   {formatTime(h.createdAt)}
                   {h.reason ? ` · ${h.reason}` : ''}

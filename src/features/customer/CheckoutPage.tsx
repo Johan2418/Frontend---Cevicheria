@@ -43,7 +43,7 @@ function CheckoutContent() {
   const total = cartTotalCents(items);
 
   async function confirm() {
-    if (!token) return;
+    if (!token || submitting) return;
     setSubmitting(true);
     try {
       const dto = {
@@ -94,8 +94,14 @@ function CheckoutContent() {
                 label={`Nota para ${item.name}`}
                 placeholder="Ej: sin cebolla, extra limón…"
                 rows={2}
+                maxLength={500}
                 value={item.observation ?? ''}
                 onChange={(e) => setObservation(item.productId, e.target.value)}
+                hint={
+                  item.observation
+                    ? `${item.observation.length}/500 caracteres`
+                    : 'Opcional'
+                }
               />
             </div>
           </li>
