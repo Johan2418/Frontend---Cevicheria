@@ -1,26 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Lock, Unlock } from 'lucide-react';import { useAuthStore } from '@/shared/auth/store';
+import { Lock, Unlock } from 'lucide-react';
+import { useAuthStore } from '@/shared/auth/store';
 import { PERMISSIONS } from '@/shared/lib/permissions';
 import { cashApi } from '@/shared/api/cash';
 import { formatMoney } from '@/shared/lib/money';
 import { formatDateTime } from '@/shared/lib/date';
 import { Card, CardBody, CardHeader } from '@/shared/components/ui/Card';
-import { Button } from '@/shared/components/ui/Button';
-import { Input } from '@/shared/components/ui/Input';
+import { CashAmountForm } from './CashAmountForm';
 import { Badge } from '@/shared/components/ui/Badge';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
 import { toastError, useToast } from '@/shared/components/ui/Toast';
-
-const openSchema = z.object({
-  openingCents: z.number().int().min(0, 'Debe ser 0 o más'),
-});
-
-const closeSchema = z.object({
-  declaredCents: z.number().int().min(0, 'Debe ser 0 o más'),
-});
+import { PageHeader } from '@/shared/components/ui/PageHeader';
+import { StatCard } from '@/shared/components/ui/StatCard';
+import { queryKeys } from '@/shared/api/queryKeys';
 
 export function CashPage() {
   const hasPermission = useAuthStore((s) => s.hasPermission);
@@ -28,7 +20,7 @@ export function CashPage() {
   const queryClient = useQueryClient();
 
   const currentQuery = useQuery({
-    queryKey: ['cash', 'current'],
+    queryKey: queryKeys.cash.current,
     queryFn: cashApi.current,
     retry: false,
     enabled: hasPermission(PERMISSIONS.CASH_READ),
@@ -38,7 +30,7 @@ export function CashPage() {
     mutationFn: cashApi.open,
     onSuccess: () => {
       toast({ tone: 'success', title: 'Caja abierta' });
-      void queryClient.invalidateQueries({ queryKey: ['cash'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.cash.all });
     },
     onError: (e) => toast(toastError(e)),
   });
@@ -47,7 +39,7 @@ export function CashPage() {
     mutationFn: cashApi.close,
     onSuccess: () => {
       toast({ tone: 'success', title: 'Caja cerrada' });
-      void queryClient.invalidateQueries({ queryKey: ['cash'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.cash.all });
     },
     onError: (e) => toast(toastError(e)),
   });
@@ -59,10 +51,7 @@ export function CashPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Caja</h1>
-        <p className="text-sm text-stone-500">Apertura y cierre de caja del día</p>
-      </div>
+      <PageHeader title="Caja" description="Apertura y cierre de caja del día" />
 
       {open && cashSession ? (
         <Card>
@@ -73,9 +62,9 @@ export function CashPage() {
           />
           <CardBody>
             <div className="grid gap-4 sm:grid-cols-3">
-              <Metric label="Fondo inicial" value={formatMoney(cashSession.openingCents)} />
-              <Metric label="Esperado en caja" value={formatMoney(currentQuery.data?.expectedCents ?? 0)} />
-              <Metric label="Declarado" value={cashSession.declaredCents != null ? formatMoney(cashSession.declaredCents) : '—'} />
+              <StatCard label="Fondo inicial" value={formatMoney(cashSession.openingCents)} />
+              <StatCard label="Esperado en caja" value={formatMoney(currentQuery.data?.expectedCents ?? 0)} />
+              <StatCard label="Declarado" value={cashSession.declaredCents != null ? formatMoney(cashSession.declaredCents) : '—'} />
             </div>
 
             {hasPermission(PERMISSIONS.CASH_CLOSE) && (
@@ -106,39 +95,27 @@ export function CashPage() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-stone-50 p-4">
-      <p className="text-sm text-stone-500">{label}</p>
-      <p className="mt-1 text-xl font-bold text-stone-900">{value}</p>
-    </div>
-  );
-}
-
 function OpenCashForm({ onSubmit, loading }: { onSubmit: (openingCents: number) => void; loading: boolean }) {
-  const form = useForm<z.infer<typeof openSchema>>({ resolver: zodResolver(openSchema), defaultValues: { openingCents: 0 } });
   return (
-    <form className="flex max-w-md items-end gap-3" onSubmit={form.handleSubmit((v) => onSubmit(v.openingCents))} noValidate>
-      <div className="flex-1">
-        <Input label="Fondo inicial (USD)" type="number" min={0} step="0.01" error={form.formState.errors.openingCents?.message} {...form.register('openingCents', { valueAsNumber: true })} />
-      </div>
-      <Button type="submit" loading={loading}>
-        <Unlock className="size-4" aria-hidden /> Abrir caja
-      </Button>
-    </form>
+    <CashAmountForm
+      label="Fondo inicial (USD)"
+      submitLabel="Abrir caja"
+      icon={<Unlock className="size-4" aria-hidden />}
+      onSubmit={onSubmit}
+      loading={loading}
+    />
   );
 }
 
 function CloseCashForm({ onSubmit, loading }: { onSubmit: (declaredCents: number) => void; loading: boolean }) {
-  const form = useForm<z.infer<typeof closeSchema>>({ resolver: zodResolver(closeSchema), defaultValues: { declaredCents: 0 } });
   return (
-    <form className="flex max-w-md items-end gap-3" onSubmit={form.handleSubmit((v) => onSubmit(v.declaredCents))} noValidate>
-      <div className="flex-1">
-        <Input label="Monto declarado (USD)" type="number" min={0} step="0.01" error={form.formState.errors.declaredCents?.message} {...form.register('declaredCents', { valueAsNumber: true })} />
-      </div>
-      <Button type="submit" variant="danger" loading={loading}>
-        <Lock className="size-4" aria-hidden /> Cerrar caja
-      </Button>
-    </form>
+    <CashAmountForm
+      label="Monto declarado (USD)"
+      submitLabel="Cerrar caja"
+      icon={<Lock className="size-4" aria-hidden />}
+      variant="danger"
+      onSubmit={onSubmit}
+      loading={loading}
+    />
   );
 }

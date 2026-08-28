@@ -26,6 +26,17 @@
   --color-accent-700: #c73e21;
   --color-accent-800: #a4361f;
   --color-accent-900: #873120;
+
+  /* Semantic layer. Components reference these instead of raw stone-* so the
+     palette can be retuned in one place. Values map to the stone ramp today. */
+  --color-surface: #fafaf9; /* stone-50  — page background */
+  --color-surface-raised: #ffffff; /* cards, sheets, drawers */
+  --color-surface-sunken: #f5f5f4; /* stone-100 — inset wells, metrics */
+  --color-border: #e7e5e4; /* stone-200 — default hairline */
+  --color-border-strong: #d6d3d1; /* stone-300 — input outlines */
+  --color-text: #1c1917; /* stone-900 — primary copy */
+  --color-text-muted: #57534e; /* stone-600 — secondary copy */
+  --color-text-subtle: #78716c; /* stone-500 — captions, labels */
 }
 
 @layer base {

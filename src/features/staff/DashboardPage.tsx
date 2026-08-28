@@ -18,27 +18,30 @@ import { formatMoney } from '@/shared/lib/money';
 import { formatDate, formatTime } from '@/shared/lib/date';
 import { Card, CardBody, CardHeader } from '@/shared/components/ui/Card';
 import { Badge } from '@/shared/components/ui/Badge';
+import { PageHeader } from '@/shared/components/ui/PageHeader';
+import { StatCard } from '@/shared/components/ui/StatCard';
 import { cn } from '@/shared/lib/cn';
+import { queryKeys } from '@/shared/api/queryKeys';
 
 export function DashboardPage() {
   const hasPermission = useAuthStore((s) => s.hasPermission);
 
   const dayQuery = useQuery({
-    queryKey: ['business-day', 'current'],
+    queryKey: queryKeys.businessDay.current,
     queryFn: inventoryApi.getCurrentBusinessDay,
     retry: false,
     enabled: hasPermission(PERMISSIONS.INVENTORY_READ),
   });
 
   const cashQuery = useQuery({
-    queryKey: ['cash', 'current'],
+    queryKey: queryKeys.cash.current,
     queryFn: cashApi.current,
     retry: false,
     enabled: hasPermission(PERMISSIONS.CASH_READ),
   });
 
   const reportQuery = useQuery({
-    queryKey: ['report', 'current'],
+    queryKey: queryKeys.reports.current,
     queryFn: reportsApi.current,
     enabled: hasPermission(PERMISSIONS.REPORT_READ),
   });
@@ -48,10 +51,7 @@ export function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Panel</h1>
-        <p className="text-sm text-stone-500">Estado general de la operación de hoy</p>
-      </div>
+      <PageHeader title="Panel" description="Estado general de la operación de hoy" />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <StatusCard
@@ -84,10 +84,10 @@ export function DashboardPage() {
           <CardHeader title="Resumen de ventas" description={`Jornada del ${formatDate(reportQuery.data.businessDate)}`} />
           <CardBody>
             <div className="grid gap-4 sm:grid-cols-4">
-              <Metric label="Pedidos entregados" value={String(reportQuery.data.sales.deliveredOrderCount)} />
-              <Metric label="Total vendido" value={formatMoney(reportQuery.data.sales.totalCents)} />
-              <Metric label="Ventas app" value={formatMoney(reportQuery.data.sales.appCents)} />
-              <Metric label="Ventas manuales" value={formatMoney(reportQuery.data.sales.manualCents)} />
+              <StatCard label="Pedidos entregados" value={String(reportQuery.data.sales.deliveredOrderCount)} />
+              <StatCard label="Total vendido" value={formatMoney(reportQuery.data.sales.totalCents)} />
+              <StatCard label="Ventas app" value={formatMoney(reportQuery.data.sales.appCents)} />
+              <StatCard label="Ventas manuales" value={formatMoney(reportQuery.data.sales.manualCents)} />
             </div>
           </CardBody>
         </Card>
@@ -153,14 +153,6 @@ function StatusCard({
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-stone-50 p-4">
-      <p className="text-sm text-stone-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-stone-900">{value}</p>
-    </div>
-  );
-}
 
 function QuickLink({ to, icon, label }: { to: string; icon: ReactNode; label: string }) {
   return (

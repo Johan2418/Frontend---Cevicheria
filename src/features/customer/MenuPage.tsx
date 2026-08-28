@@ -1,28 +1,15 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { catalogApi } from '@/shared/api/catalog';
-import type { Product } from '@/shared/types/api';
-import { formatMoney } from '@/shared/lib/money';
-import { FullPageSpinner } from '@/shared/components/ui/Spinner';
+import { queryKeys } from '@/shared/api/queryKeys';
 import { EmptyState } from '@/shared/components/ui/EmptyState';
-import { useCartStore } from './cartStore';
-import { useCartUiStore } from './cartUiStore';
-import { RequireTableSession } from './RequireTableSession';
+import { Skeleton } from '@/shared/components/ui/Skeleton';
 import { cn } from '@/shared/lib/cn';
+import { ProductCard } from './ProductCard';
 
 export function MenuPage() {
-  return (
-    <RequireTableSession>
-      <MenuContent />
-    </RequireTableSession>
-  );
-}
-
-function MenuContent() {
-  const menuQuery = useQuery({ queryKey: ['menu'], queryFn: catalogApi.getMenu });
-  const addItem = useCartStore((s) => s.addItem);
-  const openCart = useCartUiStore((s) => s.open);
+  const menuQuery = useQuery({ queryKey: queryKeys.menu, queryFn: catalogApi.getMenu });
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string | 'all'>('all');
 
@@ -44,12 +31,11 @@ function MenuContent() {
     return items;
   }, [menuQuery.data, category, search]);
 
-  if (menuQuery.isPending) return <FullPageSpinner />;
   if (menuQuery.isError) {
     return (
       <EmptyState
-        title="No se pudo cargar el menú"
-        description="Intentalo de nuevo en unos momentos."
+        title="No pudimos cargar el menú"
+        description="Revisá tu conexión y volvé a intentar en unos momentos."
       />
     );
   }
@@ -62,7 +48,10 @@ function MenuContent() {
       </div>
 
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" aria-hidden />
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400"
+          aria-hidden
+        />
         <input
           type="search"
           value={search}
@@ -73,38 +62,52 @@ function MenuContent() {
         />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Categorías">
-        <CategoryChip active={category === 'all'} onClick={() => setCategory('all')}>
-          Todo
-        </CategoryChip>
-        {categories.map((c) => (
-          <CategoryChip key={c.id} active={category === c.id} onClick={() => setCategory(c.id)}>
-            {c.name}
+      {/* Sticks under the shell header so the filter stays reachable while
+          scrolling a long menu. */}
+      <div className="sticky top-16 z-20 -mx-4 bg-stone-50/95 px-4 py-2 backdrop-blur">
+        <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Categorías">
+          <CategoryChip active={category === 'all'} onClick={() => setCategory('all')}>
+            Todo
           </CategoryChip>
-        ))}
+          {categories.map((c) => (
+            <CategoryChip key={c.id} active={category === c.id} onClick={() => setCategory(c.id)}>
+              {c.name}
+            </CategoryChip>
+          ))}
+        </div>
       </div>
 
-      {filtered.length === 0 ? (
-        <EmptyState title="Sin resultados" description="No encontramos platos con ese criterio." />
+      {menuQuery.isPending ? (
+        <MenuSkeleton />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          title="Sin resultados"
+          description="No encontramos platos con ese criterio. Probá con otro nombre o categoría."
+        />
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">
           {filtered.map((p) => (
-            <ProductCard
-              key={p.idProduct}
-              product={p}
-              onAdd={() => {
-                addItem({
-                  productId: p.idProduct,
-                  name: p.name,
-                  priceCents: p.priceCents,
-                  imageUrl: p.imageUrl,
-                });
-                openCart();
-              }}
-            />
+            <ProductCard key={p.idProduct} product={p} />
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function MenuSkeleton() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2" role="status" aria-label="Cargando el menú">
+      {Array.from({ length: 4 }, (_, i) => (
+        <div key={i} className="overflow-hidden rounded-xl border border-stone-200 bg-white">
+          <Skeleton className="aspect-4/3 w-full rounded-none" />
+          <div className="space-y-2 p-4">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -124,7 +127,7 @@ function CategoryChip({
       role="tab"
       aria-selected={active}
       className={cn(
-        'shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+        'flex min-h-9 shrink-0 items-center rounded-full border px-4 text-sm font-medium transition-colors',
         active
           ? 'border-brand-700 bg-brand-700 text-white'
           : 'border-stone-200 bg-white text-stone-600 hover:border-brand-300',
@@ -132,42 +135,5 @@ function CategoryChip({
     >
       {children}
     </button>
-  );
-}
-
-function ProductCard({ product, onAdd }: { product: Product; onAdd: () => void }) {
-  return (
-    <li className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
-      <div className="flex gap-3 p-3">
-        <div className="flex-1">
-          <h3 className="font-semibold text-stone-900">{product.name}</h3>
-          {product.description && (
-            <p className="mt-1 line-clamp-2 text-sm text-stone-500">{product.description}</p>
-          )}
-          <p className="mt-2 text-lg font-bold text-brand-800">{formatMoney(product.priceCents)}</p>
-        </div>
-        <div className="flex flex-col items-center justify-between gap-2">
-          {product.imageUrl ? (
-            <img
-              src={product.imageUrl}
-              alt=""
-              className="size-20 rounded-lg object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex size-20 items-center justify-center rounded-lg bg-stone-100 text-stone-300">
-              <Plus className="size-6" aria-hidden />
-            </div>
-          )}
-          <button
-            onClick={onAdd}
-            className="flex h-9 w-full items-center justify-center gap-1 rounded-lg bg-brand-700 text-white hover:bg-brand-800"
-            aria-label={`Agregar ${product.name} al carrito`}
-          >
-            <Plus className="size-4" aria-hidden />
-          </button>
-        </div>
-      </div>
-    </li>
   );
 }

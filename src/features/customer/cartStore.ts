@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { STORAGE_KEYS } from '@/config/env';
 
 export interface CartItem {
   productId: string;
@@ -54,7 +55,7 @@ export const useCartStore = create<CartState>()(
         })),
       clear: () => set({ items: [] }),
     }),
-    { name: 'cholosbar.cart' },
+    { name: STORAGE_KEYS.cart },
   ),
 );
 

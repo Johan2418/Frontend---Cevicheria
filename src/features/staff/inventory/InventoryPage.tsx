@@ -31,6 +31,8 @@ import { EmptyState } from '@/shared/components/ui/EmptyState';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
 import { Badge } from '@/shared/components/ui/Badge';
 import { toastError, useToast } from '@/shared/components/ui/Toast';
+import { PageHeader } from '@/shared/components/ui/PageHeader';
+import { queryKeys } from '@/shared/api/queryKeys';
 
 type MovementKind = 'RESTOCK' | 'GIFT' | 'CONSUMPTION' | 'WASTE' | 'ADJUST';
 
@@ -55,12 +57,12 @@ export function InventoryPage() {
   const [activeKind, setActiveKind] = useState<MovementKind | null>(null);
 
   const inventoryQuery = useQuery({
-    queryKey: ['inventory', 'current'],
+    queryKey: queryKeys.inventory.current,
     queryFn: inventoryApi.getCurrentInventory,
   });
 
   const movementsQuery = useQuery({
-    queryKey: ['inventory', 'movements'],
+    queryKey: queryKeys.inventory.movements,
     queryFn: () => inventoryApi.listMovements({ limit: 50 }),
   });
 
@@ -73,10 +75,7 @@ export function InventoryPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-stone-900">Inventario</h1>
-          <p className="text-sm text-stone-500">Existencias y movimientos del día</p>
-        </div>
+        <PageHeader title="Inventario" description="Existencias y movimientos del día" />
         <div className="flex flex-wrap gap-2">
           {availableKinds.map((k) => (
             <Button key={k} variant="outline" size="sm" onClick={() => setActiveKind(k)}>
@@ -253,7 +252,7 @@ function StandardMovementForm({
     onSuccess: () => {
       toast({ tone: 'success', title: `${KIND_LABEL[kind]} registrado` });
       onClose();
-      void queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.inventory.all });
     },
     onError: (e) => toast(toastError(e)),
   });
@@ -339,7 +338,7 @@ function AdjustMovementForm({
     onSuccess: () => {
       toast({ tone: 'success', title: 'Ajuste registrado' });
       onClose();
-      void queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.inventory.all });
     },
     onError: (e) => toast(toastError(e)),
   });

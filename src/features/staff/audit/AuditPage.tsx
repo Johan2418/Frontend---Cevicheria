@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ScrollText } from 'lucide-react';
 import { auditApi } from '@/shared/api/audit';
 import { formatDateTime } from '@/shared/lib/date';
@@ -8,27 +8,36 @@ import { Input } from '@/shared/components/ui/Input';
 import { Badge } from '@/shared/components/ui/Badge';
 import { EmptyState } from '@/shared/components/ui/EmptyState';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
+import { PageHeader } from '@/shared/components/ui/PageHeader';
+import { queryKeys } from '@/shared/api/queryKeys';
+import { useDebounce } from '@/shared/hooks/useDebounce';
 
 export function AuditPage() {
   const [eventCode, setEventCode] = useState('');
   const [resourceType, setResourceType] = useState('');
 
+  const debouncedEventCode = useDebounce(eventCode);
+  const debouncedResourceType = useDebounce(resourceType);
+
   const eventsQuery = useQuery({
-    queryKey: ['audit', eventCode, resourceType],
+    queryKey: queryKeys.audit.list({
+      eventCode: debouncedEventCode,
+      resourceType: debouncedResourceType,
+    }),
     queryFn: () =>
       auditApi.list({
         limit: 100,
-        eventCode: eventCode || undefined,
-        resourceType: resourceType || undefined,
+        eventCode: debouncedEventCode || undefined,
+        resourceType: debouncedResourceType || undefined,
       }),
+    // Keeps the previous rows visible while the debounced filter refetches,
+    // instead of flashing an empty table between keystrokes.
+    placeholderData: keepPreviousData,
   });
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Auditoría</h1>
-        <p className="text-sm text-stone-500">Eventos operativos del sistema</p>
-      </div>
+      <PageHeader title="Auditoría" description="Eventos operativos del sistema" />
 
       <Card>
         <CardHeader

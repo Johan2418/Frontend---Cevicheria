@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, X } from 'lucide-react';
 import { useCartStore, cartTotalCents } from './cartStore';
 import { useCartUiStore } from './cartUiStore';
 import { formatMoney } from '@/shared/lib/money';
@@ -37,7 +37,7 @@ export function CartDrawer() {
             className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
             aria-label="Cerrar"
           >
-            <Trash2 className="size-5" aria-hidden />
+            <X className="size-5" aria-hidden />
           </button>
         </header>
 

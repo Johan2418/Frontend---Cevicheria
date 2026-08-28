@@ -6,6 +6,7 @@ import type { Order } from '@/shared/types/api';
 import { formatMoney } from '@/shared/lib/money';
 import { formatRelative } from '@/shared/lib/date';
 import { OrderStatusBadge } from '@/shared/components/OrderStatusBadge';
+import { OrderProgress } from './OrderProgress';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
 import { EmptyState } from '@/shared/components/ui/EmptyState';
 import { Button } from '@/shared/components/ui/Button';
@@ -13,17 +14,10 @@ import { Modal } from '@/shared/components/ui/Modal';
 import { Textarea } from '@/shared/components/ui/Textarea';
 import { toastError, useToast } from '@/shared/components/ui/Toast';
 import { useTableSessionStore } from './tableSession';
-import { RequireTableSession } from './RequireTableSession';
+import { queryKeys } from '@/shared/api/queryKeys';
+import { hasLiveOrder } from '@/shared/lib/orderStatus';
 
 export function MyOrdersPage() {
-  return (
-    <RequireTableSession>
-      <MyOrdersContent />
-    </RequireTableSession>
-  );
-}
-
-function MyOrdersContent() {
   const token = useTableSessionStore((s) => s.token);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -31,9 +25,14 @@ function MyOrdersContent() {
   const [reason, setReason] = useState('');
 
   const ordersQuery = useQuery({
-    queryKey: ['my-orders'],
+    queryKey: queryKeys.orders.mine,
     queryFn: () => ordersApi.listMine(token!),
-    refetchInterval: 10_000,
+    // Keep tracking while an order is still moving, even if the diner has
+    // switched apps — the status is the whole point of this screen. Polling
+    // stops once everything is delivered or cancelled, so a tab left open
+    // after the meal does not keep waking the phone.
+    refetchInterval: (query) => (hasLiveOrder(query.state.data ?? []) ? 10_000 : false),
+    refetchIntervalInBackground: true,
   });
 
   if (ordersQuery.isPending) return <FullPageSpinner />;
@@ -50,7 +49,7 @@ function MyOrdersContent() {
       toast({ tone: 'success', title: 'Pedido cancelado' });
       setCanceling(null);
       setReason('');
-      await queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.orders.mine });
     } catch (e) {
       toast(toastError(e));
     }
@@ -78,8 +77,13 @@ function MyOrdersContent() {
                   <OrderStatusBadge status={order.status} />
                   <span className="text-xs text-stone-400">{formatRelative(order.createdAt)}</span>
                 </div>
-                <span className="font-bold text-stone-900">{formatMoney(order.totalCents)}</span>
+                <span className="font-bold tabular-nums text-stone-900">
+                  {formatMoney(order.totalCents)}
+                </span>
               </div>
+
+              <OrderProgress status={order.status} />
+
               <ul className="mt-3 space-y-1">
                 {order.items.map((item) => (
                   <li key={item.idOrderItem} className="flex justify-between text-sm text-stone-600">

@@ -1,17 +1,16 @@
-import { useEffect, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useTableSessionStore } from './tableSession';
 
-export function RequireTableSession({ children }: { children: ReactNode }) {
-  const navigate = useNavigate();
+/**
+ * Sends the diner back to the QR landing when there is no live table session.
+ * Applied once at the route level, so a new page under /mesa cannot forget it.
+ * Redirects declaratively rather than from an effect, which avoids rendering a
+ * blank frame before the navigation happens.
+ */
+export function RequireTableSession({ children }: { children?: ReactNode }) {
   const hasSession = useTableSessionStore((s) => s.hasSession);
 
-  useEffect(() => {
-    if (!hasSession()) {
-      navigate('/mesa', { replace: true });
-    }
-  }, [hasSession, navigate]);
-
-  if (!hasSession()) return null;
-  return <>{children}</>;
+  if (!hasSession()) return <Navigate to="/mesa" replace />;
+  return <>{children ?? <Outlet />}</>;
 }

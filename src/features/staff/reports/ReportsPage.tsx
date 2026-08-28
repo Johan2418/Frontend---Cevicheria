@@ -7,9 +7,12 @@ import { formatDate } from '@/shared/lib/date';
 import { Card, CardBody, CardHeader } from '@/shared/components/ui/Card';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
 import { EmptyState } from '@/shared/components/ui/EmptyState';
+import { PageHeader } from '@/shared/components/ui/PageHeader';
+import { StatCard } from '@/shared/components/ui/StatCard';
+import { queryKeys } from '@/shared/api/queryKeys';
 
 export function ReportsPage() {
-  const reportQuery = useQuery({ queryKey: ['report', 'current'], queryFn: reportsApi.current });
+  const reportQuery = useQuery({ queryKey: queryKeys.reports.current, queryFn: reportsApi.current });
 
   if (reportQuery.isPending) return <FullPageSpinner />;
   if (reportQuery.isError || !reportQuery.data) {
@@ -20,19 +23,19 @@ export function ReportsPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Reporte</h1>
-        <p className="text-sm text-stone-500">Resumen de la jornada del {formatDate(report.businessDate)}</p>
-      </div>
+      <PageHeader
+        title="Reporte"
+        description={`Resumen de la jornada del ${formatDate(report.businessDate)}`}
+      />
 
       <Card>
         <CardHeader title="Ventas" />
         <CardBody>
           <div className="grid gap-4 sm:grid-cols-4">
-            <Metric label="Pedidos entregados" value={String(report.sales.deliveredOrderCount)} />
-            <Metric label="Total" value={formatMoney(report.sales.totalCents)} />
-            <Metric label="Ventas app" value={formatMoney(report.sales.appCents)} />
-            <Metric label="Ventas manuales" value={formatMoney(report.sales.manualCents)} />
+            <StatCard label="Pedidos entregados" value={String(report.sales.deliveredOrderCount)} />
+            <StatCard label="Total" value={formatMoney(report.sales.totalCents)} />
+            <StatCard label="Ventas app" value={formatMoney(report.sales.appCents)} />
+            <StatCard label="Ventas manuales" value={formatMoney(report.sales.manualCents)} />
           </div>
         </CardBody>
       </Card>
@@ -80,11 +83,3 @@ export function ReportsPage() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-stone-50 p-4">
-      <p className="text-sm text-stone-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-stone-900">{value}</p>
-    </div>
-  );
-}

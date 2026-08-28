@@ -7,7 +7,7 @@ import { authApi } from '@/shared/api/auth';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { toastError, useToast } from '@/shared/components/ui/Toast';
-import { AuthLayout } from './LoginPage';
+import { AuthLayout } from './AuthLayout';
 
 const schema = z
   .object({

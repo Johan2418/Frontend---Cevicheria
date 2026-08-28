@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm, Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { QRCodeSVG } from 'qrcode.react';
@@ -11,6 +11,7 @@ import { tablesApi, type CreateTableDto } from '@/shared/api/tables';
 import type { RestaurantTable } from '@/shared/types/api';
 import { env } from '@/config/env';
 import { Card, CardBody } from '@/shared/components/ui/Card';
+import { FormCheckbox } from '@/shared/components/ui/Checkbox';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { Modal } from '@/shared/components/ui/Modal';
@@ -19,6 +20,8 @@ import { Badge } from '@/shared/components/ui/Badge';
 import { EmptyState } from '@/shared/components/ui/EmptyState';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
 import { toastError, useToast } from '@/shared/components/ui/Toast';
+import { PageHeader } from '@/shared/components/ui/PageHeader';
+import { queryKeys } from '@/shared/api/queryKeys';
 
 const tableSchema = z.object({
   code: z.string().min(1, 'Requerido').max(50).regex(/^[A-Z0-9][A-Z0-9_-]*$/, 'Solo mayúsculas, números, guion'),
@@ -36,7 +39,7 @@ export function TablesPage() {
   const [qr, setQr] = useState<{ table: RestaurantTable; qrToken: string } | null>(null);
   const [rotating, setRotating] = useState<RestaurantTable | null>(null);
 
-  const tablesQuery = useQuery({ queryKey: ['tables'], queryFn: tablesApi.listTables });
+  const tablesQuery = useQuery({ queryKey: queryKeys.tables.all, queryFn: tablesApi.listTables });
 
   const createMutation = useMutation({
     mutationFn: (dto: CreateTableDto) => tablesApi.createTable(dto),
@@ -44,7 +47,7 @@ export function TablesPage() {
       toast({ tone: 'success', title: 'Mesa creada' });
       setCreating(false);
       setQr({ table: res.table, qrToken: res.qrToken });
-      void queryClient.invalidateQueries({ queryKey: ['tables'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tables.all });
     },
     onError: (e) => toast(toastError(e)),
   });
@@ -54,7 +57,7 @@ export function TablesPage() {
     onSuccess: () => {
       toast({ tone: 'success', title: 'Mesa actualizada' });
       setEditing(null);
-      void queryClient.invalidateQueries({ queryKey: ['tables'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tables.all });
     },
     onError: (e) => toast(toastError(e)),
   });
@@ -73,10 +76,7 @@ export function TablesPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-stone-900">Mesas</h1>
-          <p className="text-sm text-stone-500">Gestioná las mesas y sus códigos QR</p>
-        </div>
+        <PageHeader title="Mesas" description="Gestioná las mesas y sus códigos QR" />
         {canManage && (
           <Button onClick={() => setCreating(true)}>
             <Plus className="size-4" aria-hidden /> Nueva mesa
@@ -203,35 +203,6 @@ function TableFormModal({
   );
 }
 
-function FormCheckbox<T extends FieldValues>({
-  control,
-  name,
-  label,
-}: {
-  control: Control<T>;
-  name: Path<T>;
-  label: string;
-}) {
-  return (
-    <Controller
-      control={control}
-      name={name}
-      render={({ field }) => (
-        <label className="flex items-center gap-2 text-sm text-stone-700">
-          <input
-            type="checkbox"
-            className="size-4 rounded border-stone-300 accent-brand-700"
-            checked={Boolean(field.value)}
-            onChange={(e) => field.onChange(e.target.checked)}
-            onBlur={field.onBlur}
-            ref={field.ref}
-          />
-          {label}
-        </label>
-      )}
-    />
-  );
-}
 
 function QrModal({ data, onClose }: { data: { table: RestaurantTable; qrToken: string }; onClose: () => void }) {
   const qrUrl = `${env.appUrl}/mesa?token=${data.qrToken}`;

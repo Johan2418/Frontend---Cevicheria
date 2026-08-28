@@ -19,10 +19,12 @@ import { Badge } from '@/shared/components/ui/Badge';
 import { EmptyState } from '@/shared/components/ui/EmptyState';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
 import { toastError, useToast } from '@/shared/components/ui/Toast';
+import { PageHeader } from '@/shared/components/ui/PageHeader';
+import { queryKeys } from '@/shared/api/queryKeys';
 
 export function PaymentsPage() {
   const ordersQuery = useQuery({
-    queryKey: ['orders', 'operational'],
+    queryKey: queryKeys.orders.operational,
     queryFn: () => ordersApi.listOperational({ limit: 100 }),
     refetchInterval: 8000,
   });
@@ -35,10 +37,7 @@ export function PaymentsPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Pagos</h1>
-        <p className="text-sm text-stone-500">Declará y verificá los pagos de cada pedido</p>
-      </div>
+      <PageHeader title="Pagos" description="Declará y verificá los pagos de cada pedido" />
 
       <Card>
         <CardHeader title="Pedidos por cobrar" description="Pedidos listos o entregados" />
@@ -70,7 +69,7 @@ function PaymentRow({ order }: { order: Order }) {
   const [voidOpen, setVoidOpen] = useState(false);
 
   const paymentQuery = useQuery({
-    queryKey: ['payment', order.idOrder],
+    queryKey: queryKeys.payments.byOrder(order.idOrder),
     queryFn: () => paymentsApi.getForOrder(order.idOrder),
     retry: false,
   });
@@ -79,7 +78,7 @@ function PaymentRow({ order }: { order: Order }) {
 
   const verifyMutation = useMutation({
     mutationFn: (id: string) => paymentsApi.verify(id),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['payment', order.idOrder] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.payments.byOrder(order.idOrder) }),
     onError: (e) => toast(toastError(e)),
   });
 
@@ -130,7 +129,7 @@ function PaymentRow({ order }: { order: Order }) {
           onSubmit={(reason) =>
             paymentsApi.reject(payment.idPayment, { reason }).then(() => {
               setRejectOpen(false);
-              void queryClient.invalidateQueries({ queryKey: ['payment', order.idOrder] });
+              void queryClient.invalidateQueries({ queryKey: queryKeys.payments.byOrder(order.idOrder) });
             })
           }
         />
@@ -142,7 +141,7 @@ function PaymentRow({ order }: { order: Order }) {
           onSubmit={(reason) =>
             paymentsApi.void(payment.idPayment, { reason }).then(() => {
               setVoidOpen(false);
-              void queryClient.invalidateQueries({ queryKey: ['payment', order.idOrder] });
+              void queryClient.invalidateQueries({ queryKey: queryKeys.payments.byOrder(order.idOrder) });
             })
           }
         />
@@ -190,7 +189,7 @@ function CreatePaymentModal({ order, onClose }: { order: Order; onClose: () => v
     onSuccess: () => {
       toast({ tone: 'success', title: 'Pago declarado' });
       onClose();
-      void queryClient.invalidateQueries({ queryKey: ['payment', order.idOrder] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.payments.byOrder(order.idOrder) });
     },
     onError: (e) => toast(toastError(e)),
   });

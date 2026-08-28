@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm, Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Pencil, Trash2, BookOpen, Package } from 'lucide-react';
@@ -8,8 +8,9 @@ import { useAuthStore } from '@/shared/auth/store';
 import { PERMISSIONS } from '@/shared/lib/permissions';
 import { catalogApi, type CreateProductDto, type UpdateProductDto } from '@/shared/api/catalog';
 import type { Category, Product } from '@/shared/types/api';
-import { formatMoney } from '@/shared/lib/money';
+import { centsToDollars, dollarsToCents, formatMoney } from '@/shared/lib/money';
 import { Card, CardBody, CardHeader } from '@/shared/components/ui/Card';
+import { FormCheckbox } from '@/shared/components/ui/Checkbox';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { Textarea } from '@/shared/components/ui/Textarea';
@@ -20,7 +21,9 @@ import { Badge } from '@/shared/components/ui/Badge';
 import { EmptyState } from '@/shared/components/ui/EmptyState';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
 import { toastError, useToast } from '@/shared/components/ui/Toast';
+import { PageHeader } from '@/shared/components/ui/PageHeader';
 import { cn } from '@/shared/lib/cn';
+import { queryKeys } from '@/shared/api/queryKeys';
 
 export function CatalogPage() {
   const hasPermission = useAuthStore((s) => s.hasPermission);
@@ -29,10 +32,7 @@ export function CatalogPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-stone-900">Catálogo</h1>
-          <p className="text-sm text-stone-500">Productos y categorías del menú</p>
-        </div>
+        <PageHeader title="Catálogo" description="Productos y categorías del menú" />
         <div className="flex rounded-lg border border-stone-200 bg-white p-1">
           <TabButton active={tab === 'products'} onClick={() => setTab('products')}>
             Productos
@@ -88,7 +88,11 @@ const productSchema = z.object({
   sku: z.string().min(2, 'Mínimo 2 caracteres').max(64).regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, 'Formato inválido'),
   name: z.string().min(2, 'Mínimo 2 caracteres').max(150),
   description: z.string().max(1000).optional(),
-  price: z.string().min(1, 'Requerido'),
+  price: z
+    .string()
+    .min(1, 'Requerido')
+    .refine((v) => dollarsToCents(v) !== null, 'Ingresá un precio válido')
+    .refine((v) => (dollarsToCents(v) ?? -1) >= 0, 'El precio no puede ser negativo'),
   imageUrl: z.string().url('URL inválida').or(z.literal('')).optional(),
   categoryId: z.string().min(1, 'Seleccioná una categoría'),
   displayOrder: z.number().int().min(0).max(10000),
@@ -104,8 +108,8 @@ function ProductsSection() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const productsQuery = useQuery({ queryKey: ['products'], queryFn: () => catalogApi.listProducts({ limit: 100 }) });
-  const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: catalogApi.listCategories });
+  const productsQuery = useQuery({ queryKey: queryKeys.products.all, queryFn: () => catalogApi.listProducts({ limit: 100 }) });
+  const categoriesQuery = useQuery({ queryKey: queryKeys.categories.all, queryFn: catalogApi.listCategories });
 
   if (productsQuery.isPending || categoriesQuery.isPending) return <FullPageSpinner />;
 
@@ -200,7 +204,7 @@ function ProductFormModal({
           sku: product.sku,
           name: product.name,
           description: product.description ?? '',
-          price: (product.priceCents / 100).toFixed(2),
+          price: centsToDollars(product.priceCents),
           imageUrl: product.imageUrl ?? '',
           categoryId: product.categoryId,
           displayOrder: product.displayOrder,
@@ -224,7 +228,8 @@ function ProductFormModal({
 
   const mutation = useMutation({
     mutationFn: (values: ProductFormValues) => {
-      const priceCents = Math.round(Number.parseFloat(values.price) * 100);
+      // Guaranteed non-null: the schema rejects prices that cannot convert.
+      const priceCents = dollarsToCents(values.price) ?? 0;
       const payload: CreateProductDto = {
         sku: values.sku,
         name: values.name,
@@ -244,8 +249,8 @@ function ProductFormModal({
     onSuccess: () => {
       toast({ tone: 'success', title: product ? 'Producto actualizado' : 'Producto creado' });
       onClose();
-      void queryClient.invalidateQueries({ queryKey: ['products'] });
-      void queryClient.invalidateQueries({ queryKey: ['menu'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.menu });
     },
     onError: (e) => toast(toastError(e)),
   });
@@ -307,14 +312,14 @@ function CategoriesSection() {
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<Category | null>(null);
 
-  const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: catalogApi.listCategories });
+  const categoriesQuery = useQuery({ queryKey: queryKeys.categories.all, queryFn: catalogApi.listCategories });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => catalogApi.deleteCategory(id),
     onSuccess: () => {
       toast({ tone: 'success', title: 'Categoría eliminada' });
       setDeleting(null);
-      void queryClient.invalidateQueries({ queryKey: ['categories'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.categories.all });
     },
     onError: (e) => toast(toastError(e)),
   });
@@ -417,7 +422,7 @@ function CategoryFormModal({ category, onClose }: { category: Category | null; o
     onSuccess: () => {
       toast({ tone: 'success', title: category ? 'Categoría actualizada' : 'Categoría creada' });
       onClose();
-      void queryClient.invalidateQueries({ queryKey: ['categories'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.categories.all });
     },
     onError: (e) => toast(toastError(e)),
   });
@@ -447,32 +452,3 @@ function CategoryFormModal({ category, onClose }: { category: Category | null; o
   );
 }
 
-function FormCheckbox<T extends FieldValues>({
-  control,
-  name,
-  label,
-}: {
-  control: Control<T>;
-  name: Path<T>;
-  label: string;
-}) {
-  return (
-    <Controller
-      control={control}
-      name={name}
-      render={({ field }) => (
-        <label className="flex items-center gap-2 text-sm text-stone-700">
-          <input
-            type="checkbox"
-            className="size-4 rounded border-stone-300 accent-brand-700"
-            checked={Boolean(field.value)}
-            onChange={(e) => field.onChange(e.target.checked)}
-            onBlur={field.onBlur}
-            ref={field.ref}
-          />
-          {label}
-        </label>
-      )}
-    />
-  );
-}

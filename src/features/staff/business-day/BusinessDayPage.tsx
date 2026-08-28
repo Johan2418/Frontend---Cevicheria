@@ -14,6 +14,8 @@ import { Badge } from '@/shared/components/ui/Badge';
 import { ConfirmDialog } from '@/shared/components/ui/ConfirmDialog';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
 import { toastError, useToast } from '@/shared/components/ui/Toast';
+import { PageHeader } from '@/shared/components/ui/PageHeader';
+import { queryKeys } from '@/shared/api/queryKeys';
 
 export function BusinessDayPage() {
   const hasPermission = useAuthStore((s) => s.hasPermission);
@@ -22,7 +24,7 @@ export function BusinessDayPage() {
   const [confirmClose, setConfirmClose] = useState(false);
 
   const dayQuery = useQuery({
-    queryKey: ['business-day', 'current'],
+    queryKey: queryKeys.businessDay.current,
     queryFn: inventoryApi.getCurrentBusinessDay,
     retry: false,
     enabled: hasPermission(PERMISSIONS.INVENTORY_READ),
@@ -44,10 +46,7 @@ export function BusinessDayPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Jornada</h1>
-        <p className="text-sm text-stone-500">Apertura y cierre del día operativo</p>
-      </div>
+      <PageHeader title="Jornada" description="Apertura y cierre del día operativo" />
 
       {open && dayQuery.data ? (
         <Card>
@@ -109,7 +108,7 @@ function OpenDayForm() {
   const [quantities, setQuantities] = useState<Record<string, string>>({});
 
   const productsQuery = useQuery({
-    queryKey: ['products'],
+    queryKey: queryKeys.products.all,
     queryFn: () => catalogApi.listProducts({ active: true, limit: 100 }),
   });
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, XCircle, Check, History } from 'lucide-react';
 import { useAuthStore } from '@/shared/auth/store';
 import { PERMISSIONS } from '@/shared/lib/permissions';
@@ -15,6 +15,10 @@ import { ConfirmDialog } from '@/shared/components/ui/ConfirmDialog';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
 import { Badge } from '@/shared/components/ui/Badge';
 import { toastError, useToast } from '@/shared/components/ui/Toast';
+import { PageHeader } from '@/shared/components/ui/PageHeader';
+import { queryKeys } from '@/shared/api/queryKeys';
+import { ORDER_STATUS_LABEL } from '@/shared/components/OrderStatusBadge';
+import { OrderAge } from './OrderAge';
 import { cn } from '@/shared/lib/cn';
 import { ManualOrderModal } from './ManualOrderModal';
 
@@ -42,15 +46,18 @@ export function KitchenPage() {
   const [historyOrder, setHistoryOrder] = useState<Order | null>(null);
 
   const ordersQuery = useQuery({
-    queryKey: ['orders', 'operational'],
+    queryKey: queryKeys.orders.operational,
     queryFn: () => ordersApi.listOperational({ limit: 100 }),
     refetchInterval: 8000,
+    // Keep the previous board on screen while refetching, so the columns do
+    // not blank out every eight seconds while someone is reading a ticket.
+    placeholderData: keepPreviousData,
   });
 
   const transitionMutation = useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: TransitionOrderDto }) =>
       ordersApi.transition(id, dto),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['orders'] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.orders.all }),
     onError: (e) => toast(toastError(e)),
   });
 
@@ -63,10 +70,7 @@ export function KitchenPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-stone-900">Cocina</h1>
-          <p className="text-sm text-stone-500">Seguí y avanzá el estado de los pedidos</p>
-        </div>
+        <PageHeader title="Cocina" description="Seguí y avanzá el estado de los pedidos" />
         {canManual && (
           <Button onClick={() => setManualOpen(true)}>
             <Plus className="size-4" aria-hidden /> Pedido manual
@@ -157,7 +161,10 @@ function OrderCard({
         <span className="font-semibold text-stone-900">
           {order.table ? `Mesa ${order.table.code}` : order.origin === 'MANUAL' ? 'Manual' : 'App'}
         </span>
-        <span className="text-xs text-stone-400">{formatTime(order.createdAt)}</span>
+        <span className="flex items-center gap-1.5">
+          <span className="text-xs text-stone-400">{formatTime(order.createdAt)}</span>
+          <OrderAge createdAt={order.createdAt} status={order.status} />
+        </span>
       </div>
 
       <ul className="mt-2 space-y-1 text-sm">
@@ -216,7 +223,9 @@ function OrderCard({
           setConfirmTo(null);
         }}
         title="Cambiar estado"
-        description={`¿Avanzar el pedido a "${confirmTo}"?`}
+        description={
+          confirmTo ? `¿Avanzar el pedido a "${ORDER_STATUS_LABEL[confirmTo]}"?` : undefined
+        }
         confirmLabel="Confirmar"
         tone="primary"
       />
@@ -234,7 +243,7 @@ function CancelExceptionButton({ order }: { order: Order }) {
     onSuccess: () => {
       toast({ tone: 'success', title: 'Pedido cancelado' });
       setOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ['orders'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
     },
     onError: (e) => toast(toastError(e)),
   });
@@ -339,7 +348,7 @@ function CancelExceptionModal({
 
 function HistoryModal({ orderId, onClose }: { orderId: string; onClose: () => void }) {
   const historyQuery = useQuery({
-    queryKey: ['order', orderId, 'history'],
+    queryKey: queryKeys.orders.history(orderId),
     queryFn: () => ordersApi.getHistory(orderId),
   });
 

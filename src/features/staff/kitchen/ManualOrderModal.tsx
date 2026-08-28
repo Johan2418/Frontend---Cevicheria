@@ -11,6 +11,7 @@ import { Modal } from '@/shared/components/ui/Modal';
 import { Select } from '@/shared/components/ui/Select';
 import { Input } from '@/shared/components/ui/Input';
 import { toastError, useToast } from '@/shared/components/ui/Toast';
+import { queryKeys } from '@/shared/api/queryKeys';
 
 interface DraftItem {
   productId: string;
@@ -26,15 +27,15 @@ export function ManualOrderModal({ onClose }: { onClose: () => void }) {
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState(1);
 
-  const productsQuery = useQuery({ queryKey: ['products'], queryFn: () => catalogApi.listProducts({ active: true, limit: 100 }) });
-  const tablesQuery = useQuery({ queryKey: ['tables'], queryFn: tablesApi.listTables });
+  const productsQuery = useQuery({ queryKey: queryKeys.products.all, queryFn: () => catalogApi.listProducts({ active: true, limit: 100 }) });
+  const tablesQuery = useQuery({ queryKey: queryKeys.tables.all, queryFn: tablesApi.listTables });
 
   const mutation = useMutation({
     mutationFn: (dto: CreateManualOrderDto) => ordersApi.createManualOrder(dto, newIdempotencyKey()),
     onSuccess: () => {
       toast({ tone: 'success', title: 'Pedido creado' });
       onClose();
-      void queryClient.invalidateQueries({ queryKey: ['orders'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
     },
     onError: (e) => toast(toastError(e)),
   });

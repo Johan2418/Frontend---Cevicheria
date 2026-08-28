@@ -16,6 +16,8 @@ import { ConfirmDialog } from '@/shared/components/ui/ConfirmDialog';
 import { Badge } from '@/shared/components/ui/Badge';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
 import { toastError, useToast } from '@/shared/components/ui/Toast';
+import { PageHeader } from '@/shared/components/ui/PageHeader';
+import { queryKeys } from '@/shared/api/queryKeys';
 
 const ALL_PERMISSIONS = Object.values(PERMISSIONS) as PermissionCode[];
 
@@ -33,14 +35,14 @@ export function RolesPage() {
   const [permissionsFor, setPermissionsFor] = useState<Rol | null>(null);
   const [deleting, setDeleting] = useState<Rol | null>(null);
 
-  const rolesQuery = useQuery({ queryKey: ['rols'], queryFn: rolesApi.list });
+  const rolesQuery = useQuery({ queryKey: queryKeys.roles.all, queryFn: rolesApi.list });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => rolesApi.remove(id),
     onSuccess: () => {
       toast({ tone: 'success', title: 'Rol eliminado' });
       setDeleting(null);
-      void queryClient.invalidateQueries({ queryKey: ['rols'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.roles.all });
     },
     onError: (e) => toast(toastError(e)),
   });
@@ -50,10 +52,7 @@ export function RolesPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-stone-900">Roles</h1>
-          <p className="text-sm text-stone-500">Roles del sistema y sus permisos</p>
-        </div>
+        <PageHeader title="Roles" description="Roles del sistema y sus permisos" />
         <Button onClick={() => setCreating(true)}>
           <Plus className="size-4" aria-hidden /> Nuevo rol
         </Button>
@@ -140,7 +139,7 @@ function RoleFormModal({ role, onClose }: { role?: Rol; onClose: () => void }) {
     onSuccess: () => {
       toast({ tone: 'success', title: role ? 'Rol actualizado' : 'Rol creado' });
       onClose();
-      void queryClient.invalidateQueries({ queryKey: ['rols'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.roles.all });
     },
     onError: (e) => toast(toastError(e)),
   });
@@ -181,7 +180,7 @@ function PermissionsModal({ role, onClose }: { role: Rol; onClose: () => void })
     onSuccess: () => {
       toast({ tone: 'success', title: 'Permisos actualizados' });
       onClose();
-      void queryClient.invalidateQueries({ queryKey: ['rols'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.roles.all });
     },
     onError: (e) => toast(toastError(e)),
   });

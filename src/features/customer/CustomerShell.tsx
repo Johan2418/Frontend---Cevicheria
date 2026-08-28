@@ -1,11 +1,13 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { ShoppingBag, Receipt, QrCode } from 'lucide-react';
+import { ShoppingBag, Receipt, QrCode, UtensilsCrossed } from 'lucide-react';
 import { BrandLogo } from '@/shared/components/BrandLogo';
+import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { useCartStore, cartCount } from './cartStore';
 import { useCartUiStore } from './cartUiStore';
 import { useTableSessionStore } from './tableSession';
 import { CartDrawer } from './CartDrawer';
+import { OrderBar } from './OrderBar';
 import { cn } from '@/shared/lib/cn';
 
 export function CustomerShell() {
@@ -32,7 +34,7 @@ export function CustomerShell() {
             <button
               onClick={() => useCartUiStore.getState().open()}
               className="relative rounded-lg p-2 text-stone-600 hover:bg-stone-100"
-              aria-label={`Abrir carrito, ${count} artículos`}
+              aria-label={`Abrir carrito, ${count} ${count === 1 ? 'artículo' : 'artículos'}`}
             >
               <ShoppingBag className="size-6" aria-hidden />
               {count > 0 && (
@@ -45,24 +47,39 @@ export function CustomerShell() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 pb-24 pt-4">
-        <Outlet />
+      <main
+        className={cn(
+          'mx-auto max-w-2xl px-4 pt-4',
+          // Clear the tab bar, plus the order bar when it is showing.
+          count > 0
+            ? 'pb-[calc(9rem+env(safe-area-inset-bottom))]'
+            : 'pb-[calc(6rem+env(safe-area-inset-bottom))]',
+        )}
+      >
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)]"
         aria-label="Navegación principal"
       >
         <div className="mx-auto flex max-w-2xl">
-          <TabLink to="/mesa/menu" label="Menú" icon={<Receipt className="size-5" aria-hidden />} />
+          <TabLink
+            to="/mesa/menu"
+            label="Menú"
+            icon={<UtensilsCrossed className="size-5" aria-hidden />}
+          />
           <TabLink
             to="/mesa/ordenes"
             label="Mis pedidos"
-            icon={<ShoppingBag className="size-5" aria-hidden />}
+            icon={<Receipt className="size-5" aria-hidden />}
           />
         </div>
       </nav>
 
+      <OrderBar />
       <CartDrawer />
     </div>
   );

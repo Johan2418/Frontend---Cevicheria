@@ -14,6 +14,7 @@ import { FullPageSpinner } from '@/shared/components/ui/Spinner';
 import { toastError, useToast } from '@/shared/components/ui/Toast';
 import { BrandLogo } from '@/shared/components/BrandLogo';
 import { ArrowLeft } from 'lucide-react';
+import { queryKeys } from '@/shared/api/queryKeys';
 
 const profileSchema = z.object({
   nombrePerfil: z.string().min(1, 'Requerido').max(80),
@@ -35,7 +36,7 @@ export function ProfilePage() {
   const navigate = useNavigate();
 
   const perfilQuery = useQuery({
-    queryKey: ['perfil', profile?.idUser],
+    queryKey: queryKeys.perfil.byUser(profile?.idUser),
     queryFn: () => perfilApi.get(profile!.idUser),
     enabled: Boolean(profile),
   });

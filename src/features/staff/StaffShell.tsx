@@ -20,6 +20,7 @@ import {
 import { useAuthStore } from '@/shared/auth/store';
 import { PERMISSIONS, type PermissionCode } from '@/shared/lib/permissions';
 import { BrandLogo } from '@/shared/components/BrandLogo';
+import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { cn } from '@/shared/lib/cn';
 
 interface NavItem {
@@ -104,6 +105,18 @@ export function StaffShell() {
     (item) => !item.permissions || item.permissions.some((p) => hasPermission(p)),
   );
 
+  const logoutBlock = (
+    <div className="border-t border-white/10 p-3">
+      <button
+        onClick={() => void logout().then(() => navigate('/login'))}
+        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-brand-100 hover:bg-white/5 hover:text-white"
+      >
+        <LogOut className="size-5" aria-hidden />
+        Cerrar sesión
+      </button>
+    </div>
+  );
+
   const sidebar = (
     <nav aria-label="Secciones" className="flex flex-1 flex-col gap-1 p-3">
       {visibleItems.map((item) => (
@@ -137,15 +150,7 @@ export function StaffShell() {
           </Link>
         </div>
         {sidebar}
-        <div className="border-t border-white/10 p-3">
-          <button
-            onClick={() => void logout().then(() => navigate('/login'))}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-brand-100 hover:bg-white/5 hover:text-white"
-          >
-            <LogOut className="size-5" aria-hidden />
-            Cerrar sesión
-          </button>
-        </div>
+        {logoutBlock}
       </aside>
 
       {mobileOpen && (
@@ -167,15 +172,7 @@ export function StaffShell() {
               </button>
             </div>
             {sidebar}
-            <div className="border-t border-white/10 p-3">
-              <button
-                onClick={() => void logout().then(() => navigate('/login'))}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-brand-100 hover:bg-white/5 hover:text-white"
-              >
-                <LogOut className="size-5" aria-hidden />
-                Cerrar sesión
-              </button>
-            </div>
+            {logoutBlock}
           </aside>
         </div>
       )}
@@ -202,7 +199,9 @@ export function StaffShell() {
         </header>
 
         <main className="p-4 sm:p-6">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>
