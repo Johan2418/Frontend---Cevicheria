@@ -35,9 +35,12 @@ export function ProfilePage() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // `/perfil/:id` se indexa por idPerfil, no por idUser: pedir el perfil propio
+  // por su endpoint dedicado evita el 404 que dejaba el formulario en blanco y
+  // hacía que "Guardar" intentara crear un perfil que ya existía.
   const perfilQuery = useQuery({
-    queryKey: queryKeys.perfil.byUser(profile?.idUser),
-    queryFn: () => perfilApi.get(profile!.idUser),
+    queryKey: queryKeys.perfil.mine(profile?.idUser),
+    queryFn: perfilApi.getMine,
     enabled: Boolean(profile),
   });
 
@@ -73,6 +76,8 @@ export function ProfilePage() {
 
   if (perfilQuery.isPending) return <FullPageSpinner />;
 
+  const hasPerfil = Boolean(perfilQuery.data);
+
   return (
     <div className="min-h-screen bg-stone-100">
       <header className="bg-white shadow-sm">
@@ -93,7 +98,11 @@ export function ProfilePage() {
         <Card>
           <CardHeader
             title="Mi perfil"
-            description={`Sesión iniciada como ${profile?.correo ?? ''}`}
+            description={
+              hasPerfil
+                ? `Sesión iniciada como ${profile?.correo ?? ''}`
+                : 'Todavía no completaste tu perfil. Cargá tus datos para terminar.'
+            }
           />
           <CardBody>
             <form
@@ -112,7 +121,7 @@ export function ProfilePage() {
               />
               <div className="sm:col-span-2">
                 <Button type="submit" loading={saveMutation.isPending}>
-                  Guardar perfil
+                  {hasPerfil ? 'Guardar perfil' : 'Crear perfil'}
                 </Button>
               </div>
             </form>

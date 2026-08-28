@@ -10,6 +10,11 @@ export const queryKeys = {
 
   products: {
     all: ['products'] as const,
+    // Pages request different slices of the catalogue (the staff catalogue
+    // lists inactive products too), so the filters have to be part of the key
+    // or one page serves the other's rows from cache.
+    list: (filters: { active?: boolean; limit?: number }) =>
+      ['products', filters] as const,
   },
 
   categories: {
@@ -64,6 +69,8 @@ export const queryKeys = {
   },
 
   perfil: {
-    byUser: (userId: number | undefined) => ['perfil', userId] as const,
+    // The API resolves the caller's own profile from the token, so the key is
+    // scoped by user id only to drop the cache when the session changes.
+    mine: (userId: number | undefined) => ['perfil', 'me', userId] as const,
   },
 } as const;

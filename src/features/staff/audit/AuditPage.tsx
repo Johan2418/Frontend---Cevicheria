@@ -15,9 +15,8 @@ import { useDebounce } from '@/shared/hooks/useDebounce';
 export function AuditPage() {
   const [eventCode, setEventCode] = useState('');
   const [resourceType, setResourceType] = useState('');
-
-  const debouncedEventCode = useDebounce(eventCode);
-  const debouncedResourceType = useDebounce(resourceType);
+  const debouncedEventCode = useDebounce(eventCode.trim());
+  const debouncedResourceType = useDebounce(resourceType.trim());
 
   const eventsQuery = useQuery({
     queryKey: queryKeys.audit.list({
@@ -66,10 +65,18 @@ export function AuditPage() {
         <CardBody>
           {eventsQuery.isPending ? (
             <FullPageSpinner />
+          ) : eventsQuery.isError ? (
+            <EmptyState
+              title="No se pudo cargar la auditoría"
+              description="Intentá de nuevo en unos momentos."
+            />
           ) : !eventsQuery.data || eventsQuery.data.length === 0 ? (
             <EmptyState title="Sin eventos" description="No se encontraron eventos de auditoría." />
           ) : (
-            <div className="overflow-x-auto">
+            <div
+              className={eventsQuery.isFetching ? 'overflow-x-auto opacity-60 transition-opacity' : 'overflow-x-auto'}
+              aria-busy={eventsQuery.isFetching}
+            >
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-stone-200 text-stone-500">

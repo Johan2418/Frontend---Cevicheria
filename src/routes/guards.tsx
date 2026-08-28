@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/shared/auth/store';
 import type { PermissionCode } from '@/shared/lib/permissions';
 import { FullPageSpinner } from '@/shared/components/ui/Spinner';
@@ -47,16 +47,23 @@ export function RequirePermission({
   children?: ReactNode;
 }) {
   const hasPermission = useAuthStore((s) => s.hasPermission);
-
-  const codes = anyOf ?? (code ? [code] : []);
-  const allowed = codes.length === 0 || codes.some((c) => hasPermission(c));
+  const required = anyOf ?? (code ? [code] : []);
+  const allowed = required.length === 0 || required.some((p) => hasPermission(p));
 
   if (!allowed) {
     return (
       <EmptyState
         icon={<ShieldX className="size-10" aria-hidden />}
         title="Sin permisos"
-        description="No tenés permisos para ver esta sección."
+        description="No tienes permisos para ver esta sección. Si crees que es un error, pide a un administrador que revise tu rol."
+        action={
+          <Link
+            to="/admin"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+          >
+            Volver al panel
+          </Link>
+        }
       />
     );
   }

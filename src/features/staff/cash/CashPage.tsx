@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
 import { Lock, Unlock } from 'lucide-react';
 import { useAuthStore } from '@/shared/auth/store';
 import { PERMISSIONS } from '@/shared/lib/permissions';
 import { cashApi } from '@/shared/api/cash';
 import { formatMoney } from '@/shared/lib/money';
 import { formatDateTime } from '@/shared/lib/date';
+import { cn } from '@/shared/lib/cn';
 import { Card, CardBody, CardHeader } from '@/shared/components/ui/Card';
 import { CashAmountForm } from './CashAmountForm';
 import { Badge } from '@/shared/components/ui/Badge';
@@ -47,11 +49,52 @@ export function CashPage() {
   if (currentQuery.isPending) return <FullPageSpinner />;
 
   const cashSession = currentQuery.data?.cashSession;
-  const open = Boolean(cashSession);
+  // `/cash-sessions/current` también devuelve la caja ya cerrada de la jornada,
+  // así que el estado manda: si no está OPEN, la caja no está abierta.
+  const open = cashSession?.status === 'OPEN';
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader title="Caja" description="Apertura y cierre de caja del día" />
+
+      {cashSession && !open && (
+        <Card>
+          <CardHeader
+            title="Caja cerrada"
+            action={<Badge tone="neutral">Cerrada</Badge>}
+            description={
+              cashSession.closedAt
+                ? `Cerrada el ${formatDateTime(cashSession.closedAt)}`
+                : 'La caja de esta jornada ya fue cerrada'
+            }
+          />
+          <CardBody>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <StatCard label="Fondo inicial" value={formatMoney(cashSession.openingCents)} />
+              <StatCard
+                label="Esperado"
+                value={cashSession.expectedCents != null ? formatMoney(cashSession.expectedCents) : '—'}
+              />
+              <StatCard
+                label="Declarado"
+                value={cashSession.declaredCents != null ? formatMoney(cashSession.declaredCents) : '—'}
+              />
+            </div>
+            {cashSession.differenceCents != null && cashSession.differenceCents !== 0 && (
+              <p
+                className={cn(
+                  'mt-4 rounded-lg p-3 text-sm font-medium',
+                  cashSession.differenceCents > 0
+                    ? 'bg-emerald-50 text-emerald-800'
+                    : 'bg-red-50 text-red-800',
+                )}
+              >
+                Diferencia de cierre: {formatMoney(cashSession.differenceCents)}
+              </p>
+            )}
+          </CardBody>
+        </Card>
+      )}
 
       {open && cashSession ? (
         <Card>
@@ -77,20 +120,23 @@ export function CashPage() {
             )}
           </CardBody>
         </Card>
-      ) : hasPermission(PERMISSIONS.CASH_OPEN) ? (
+      ) : !cashSession && hasPermission(PERMISSIONS.CASH_OPEN) ? (
         <Card>
           <CardHeader title="Abrir caja" description="Registrá el fondo con el que inicia la caja" />
           <CardBody>
-            <OpenCashForm onSubmit={(openingCents) => openMutation.mutate({ openingCents })} loading={openMutation.isPending} />
+            <OpenCashForm
+              onSubmit={(openingCents) => openMutation.mutate({ openingCents })}
+              loading={openMutation.isPending}
+            />
           </CardBody>
         </Card>
-      ) : (
+      ) : !cashSession ? (
         <Card>
           <CardBody>
             <p className="text-sm text-stone-600">No hay caja abierta y no tenés permisos para abrirla.</p>
           </CardBody>
         </Card>
-      )}
+      ) : null}
     </div>
   );
 }

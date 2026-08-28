@@ -54,6 +54,15 @@ describe('dollarsToCents', () => {
     expect(dollarsToCents('abc')).toBeNull();
     expect(dollarsToCents(Number.NaN)).toBeNull();
   });
+
+  it('no arrastra errores de coma flotante', () => {
+    expect(dollarsToCents(1.1)).toBe(110);
+    expect(Number.isInteger(dollarsToCents(8.35))).toBe(true);
+  });
+
+  it('es la inversa de centsToDollars', () => {
+    expect(centsToDollars(dollarsToCents(123.45) as number)).toBe('123.45');
+  });
 });
 
 describe('centsToDollars', () => {

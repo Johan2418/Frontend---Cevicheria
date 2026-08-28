@@ -34,7 +34,7 @@ export function CheckoutPage() {
   const total = cartTotalCents(items);
 
   async function confirm() {
-    if (!token) return;
+    if (!token || submitting) return;
     setSubmitting(true);
     try {
       const dto = {

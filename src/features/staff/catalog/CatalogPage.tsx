@@ -108,7 +108,10 @@ function ProductsSection() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const productsQuery = useQuery({ queryKey: queryKeys.products.all, queryFn: () => catalogApi.listProducts({ limit: 100 }) });
+  const productsQuery = useQuery({
+    queryKey: queryKeys.products.list({ limit: 100 }),
+    queryFn: () => catalogApi.listProducts({ limit: 100 }),
+  });
   const categoriesQuery = useQuery({ queryKey: queryKeys.categories.all, queryFn: catalogApi.listCategories });
 
   if (productsQuery.isPending || categoriesQuery.isPending) return <FullPageSpinner />;

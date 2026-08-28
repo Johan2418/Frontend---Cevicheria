@@ -55,7 +55,20 @@ export const useCartStore = create<CartState>()(
         })),
       clear: () => set({ items: [] }),
     }),
-    { name: STORAGE_KEYS.cart },
+    {
+      // El carrito vive en sessionStorage igual que la sesión de mesa: si se
+      // guardara en localStorage, el siguiente comensal que abriera la app en
+      // esa tablet heredaría el pedido a medio armar del anterior.
+      name: STORAGE_KEYS.cart,
+      storage: {
+        getItem: (name) => {
+          const raw = sessionStorage.getItem(name);
+          return raw ? JSON.parse(raw) : null;
+        },
+        setItem: (name, value) => sessionStorage.setItem(name, JSON.stringify(value)),
+        removeItem: (name) => sessionStorage.removeItem(name),
+      },
+    },
   ),
 );
 

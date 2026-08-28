@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { Button } from '@/shared/components/ui/Button';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { catalogApi } from '@/shared/api/catalog';
@@ -13,10 +14,14 @@ export function MenuPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string | 'all'>('all');
 
+  // El menú ya viene ordenado por categoría desde la API; el Map preserva ese
+  // orden y se indexa por categoryId, que es el campo por el que se filtra.
   const categories = useMemo(() => {
     const map = new Map<string, string>();
     for (const p of menuQuery.data ?? []) {
-      if (p.category) map.set(p.category.idCategory, p.category.name);
+      if (!map.has(p.categoryId)) {
+        map.set(p.categoryId, p.category?.name ?? 'Otros');
+      }
     }
     return [...map.entries()].map(([id, name]) => ({ id, name }));
   }, [menuQuery.data]);
@@ -26,7 +31,11 @@ export function MenuPage() {
     if (category !== 'all') items = items.filter((p) => p.categoryId === category);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      items = items.filter((p) => p.name.toLowerCase().includes(q));
+      items = items.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.description ?? '').toLowerCase().includes(q),
+      );
     }
     return items;
   }, [menuQuery.data, category, search]);
@@ -36,6 +45,11 @@ export function MenuPage() {
       <EmptyState
         title="No pudimos cargar el menú"
         description="Revisá tu conexión y volvé a intentar en unos momentos."
+        action={
+          <Button onClick={() => void menuQuery.refetch()} loading={menuQuery.isFetching}>
+            Reintentar
+          </Button>
+        }
       />
     );
   }
@@ -83,6 +97,17 @@ export function MenuPage() {
         <EmptyState
           title="Sin resultados"
           description="No encontramos platos con ese criterio. Probá con otro nombre o categoría."
+          action={
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearch('');
+                setCategory('all');
+              }}
+            >
+              Limpiar filtros
+            </Button>
+          }
         />
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">
@@ -137,3 +162,4 @@ function CategoryChip({
     </button>
   );
 }
+
